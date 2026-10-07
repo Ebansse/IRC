@@ -17,9 +17,13 @@
 #include <fcntl.h>
 #include <cctype>
 #include <cstdlib>
+#include <csignal>
+#include <sstream>
 
 class Client;
 class Channel;
+
+extern volatile sig_atomic_t g_signal;
 
 class Server
 {
@@ -42,7 +46,15 @@ class Server
         void handlePass(int fd, std::vector<std::string> params);
         void handleNick(int fd, std::vector<std::string> params);
         void handleUser(int fd, std::vector<std::string> params);
+        void handleJoin(int fd, std::vector<std::string> params);
+        void handlePart(int fd, std::vector<std::string> params);
+        void handlePrivmsg(int fd, std::vector<std::string> params);
+        void handleKick(int fd, std::vector<std::string> params);
+        void handleInvite(int fd, std::vector<std::string> params);
+        void handleTopic(int fd, std::vector<std::string> params);
+        void handleMode(int fd, std::vector<std::string> params);
         void sendReply(int fd, std::string code, std::string message);
+        Client* getClientByNick(const std::string& nick);
     public:
         Server(int _port, std::string _password);
         ~Server();

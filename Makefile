@@ -12,7 +12,6 @@ SRCS = main.cpp \
        Server_mode.cpp \
        Client.cpp \
        Channel.cpp \
-       Message.cpp \
        utils.cpp
 
 OBJS_DIR = objs

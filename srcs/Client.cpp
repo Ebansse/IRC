@@ -8,9 +8,11 @@ Client::Client(int fd, const std::string& ip, int port)
     _fd = fd;
     _ip = ip;
     _port = port;
+    _hostname = ip;
     _passOk = false;
     _nickOk = false;
     _userOk = false;
+    _registered = false;
 }
 
 Client::~Client() {}
@@ -108,7 +110,6 @@ const std::string& Client::getHostname() const
 
 const std::string Client::getPrefix()
 {
-    // Format IRC standard : nick!user@host
     return _nickname + "!" + _username + "@" + _hostname;
 }
 

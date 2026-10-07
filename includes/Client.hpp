@@ -1,3 +1,6 @@
+#ifndef CLIENT_HPP
+#define CLIENT_HPP
+
 #include <unistd.h>
 #include <iostream>
 #include <string>
@@ -69,3 +72,5 @@ class Client
         bool isInChannel(Channel *channel) const;
 
 };
+
+#endif

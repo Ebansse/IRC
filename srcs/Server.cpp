@@ -1,21 +1,35 @@
 #include "../includes/Server.hpp"
 #include "../includes/replies.hpp"
 #include "../includes/utils.hpp"
-#include "../includes/Message.hpp"
 #include "../includes/Client.hpp"
 #include "../includes/Channel.hpp"
+
+volatile sig_atomic_t g_signal = 0;
+
+static void signalHandler(int sig)
+{
+    g_signal = sig;
+}
 
 Server::Server(int _port, std::string _password)
 {
     this->_port = _port;
     this->_password = _password;
+    this->_name = "ircserv";
     initSocket();
     run();
 }
 
 Server::~Server()
 {
-
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        close(it->first);
+        delete it->second;
+    }
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+        delete it->second;
+    close(_fdserver);
 }
 
 void Server::sendReply(int fd, std::string code, std::string message)
@@ -54,9 +68,20 @@ void Server::acceptClient()
 
 void Server::disconnectClient(int fd)
 {
+    std::vector<std::string> emptyChannels;
     for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it)
     {
-        it->second->removeMember(_clients[fd]);
+        if (it->second->isMember(_clients[fd]))
+        {
+            it->second->removeMember(_clients[fd]);
+            if (it->second->getMemberCount() == 0)
+                emptyChannels.push_back(it->first);
+        }
+    }
+    for (size_t i = 0; i < emptyChannels.size(); i++)
+    {
+        delete _channels[emptyChannels[i]];
+        _channels.erase(emptyChannels[i]);
     }
 
     for(size_t i = 0; i < _pollfd.size(); i++)
@@ -89,41 +114,69 @@ void Server::handleClient(int fd)
     _clients[fd]->appendToRecvBuffer(buffer);
 
     if(_clients[fd]->getRecvBuffer().size() > 510
-        && _clients[fd]->getRecvBuffer().find("\r\n") == std::string::npos)
+        && _clients[fd]->getRecvBuffer().find("\n") == std::string::npos)
     {
         _clients[fd]->clearBuffer();
         return;
     }
 
     size_t pos;
-    while((pos = _clients[fd]->getRecvBuffer().find("\r\n")) != std::string::npos)
+    while((pos = _clients[fd]->getRecvBuffer().find("\n")) != std::string::npos)
     {
         if(pos > 510)
         {
-            _clients[fd]->getRecvBuffer().erase(0, pos + 2);
+            _clients[fd]->getRecvBuffer().erase(0, pos + 1);
             continue;
         }
         std::string command = _clients[fd]->getRecvBuffer().substr(0, pos);
-        _clients[fd]->getRecvBuffer().erase(0, pos + 2);
-        processCommand(fd, command);
+        _clients[fd]->getRecvBuffer().erase(0, pos + 1);
+        if(!command.empty() && command[command.size() - 1] == '\r')
+            command.erase(command.size() - 1);
+        if(!command.empty())
+            processCommand(fd, command);
+        if(_clients.find(fd) == _clients.end())
+            return;
     }
 }
 
 void Server::run()
 {
-    while(true)
+    signal(SIGINT, signalHandler);
+    signal(SIGQUIT, signalHandler);
+    while(!g_signal)
     {
-         int ready = poll(_pollfd.data(), _pollfd.size(), -1);
-         if(ready == -1)
+        int ready = poll(_pollfd.data(), _pollfd.size(), -1);
+        if(ready == -1)
+        {
+            if(g_signal)
+                break;
             throw std::runtime_error("Poll failed");
+        }
         for(size_t i = 0; i < _pollfd.size(); i++)
         {
             if(_pollfd[i].revents == 0)
                 continue;
             if(_pollfd[i].fd == _fdserver)
+            {
                 acceptClient();
-            else
-                handleClient(_pollfd[i].fd);
+                continue;
+            }
+            int clientFd = _pollfd[i].fd;
+            if(_pollfd[i].revents & (POLLHUP | POLLERR))
+            {
+                disconnectClient(clientFd);
+                i--;
+                continue;
+            }
+            if(_pollfd[i].revents & POLLIN)
+            {
+                handleClient(clientFd);
+                if(_clients.find(clientFd) == _clients.end())
+                {
+                    i--;
+                    continue;
+                }
+            }
         }
     }
 }

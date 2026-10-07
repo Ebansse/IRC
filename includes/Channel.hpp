@@ -1,3 +1,6 @@
+#ifndef CHANNEL_HPP
+#define CHANNEL_HPP
+
 #include <unistd.h>
 #include <iostream>
 #include <string>
@@ -69,3 +72,5 @@ class Channel
         
         void broadcast(const std::string& message, Client* exclude);
 };
+
+#endif

@@ -1,0 +1,21 @@
+# Compiled objects
+*.o
+*.obj
+
+# Executables
+ircserv
+
+# Build directory
+objs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.claude/

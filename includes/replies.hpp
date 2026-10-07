@@ -9,6 +9,7 @@
 #define RPL_CHANNELMODEIS "324"
 #define RPL_NOTOPIC "331"
 #define RPL_TOPIC "332"
+#define RPL_TOPICWHOTIME "333"
 #define RPL_INVITING "341"
 #define RPL_NAMREPLY "353"
 #define RPL_ENDOFNAMES "366"

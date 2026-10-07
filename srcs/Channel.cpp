@@ -1,7 +1,9 @@
 #include "../includes/Channel.hpp"
 #include "../includes/Client.hpp"
 
-Channel::Channel(const std::string& name) : _name(name) {}
+Channel::Channel(const std::string& name) : _name(name), _topicTime(0),
+    _userLimit(0), _inviteOnly(false), _topicRestricted(false),
+    _hasKey(false), _hasLimit(false), _moderated(false) {}
 
 Channel::~Channel() {}
 
@@ -252,6 +254,20 @@ bool Channel::canChangeTopic(Client* client) const
         return false;
     }
     return true;
+}
+
+std::string Channel::getMemberList() const
+{
+    std::string list;
+    for (std::map<int, Client*>::const_iterator it = _members.begin(); it != _members.end(); ++it)
+    {
+        if (!list.empty())
+            list += " ";
+        if (_operators.find(it->first) != _operators.end())
+            list += "@";
+        list += it->second->getNickname();
+    }
+    return list;
 }
 
 void Channel::broadcast(const std::string& message, Client* sender)
